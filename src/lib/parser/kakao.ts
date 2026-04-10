@@ -1,6 +1,7 @@
 import type { ChatData, Message, MessageType, ParseResult, Participant } from '$lib/types';
 
-const DATE_HEADER_RE = /^-+\s*(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일.*-+$/;
+const DATE_HEADER_RE =
+	/^-*\s*(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일(?:\s*[가-힣]요일)?\s*-*\s*$/;
 
 const PC_MESSAGE_RE = /^\[([^\]]+)\]\s*\[(오전|오후)\s*(\d{1,2}):(\d{2})\]\s*(.*)$/;
 
