@@ -2,10 +2,15 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { analyzeStatistics } from '$lib/analyzer/statistics';
-	import type { ChatData, Statistics } from '$lib/types';
+	import { sampleMessages } from '$lib/analyzer/sampler';
+	import type { AIAnalysis, AnalyzeResponse, ChatData, Statistics } from '$lib/types';
 
 	let stats = $state<Statistics | null>(null);
+	let chatDataRef = $state<ChatData | null>(null);
 	let error = $state<string | null>(null);
+	let aiAnalysis = $state<AIAnalysis | null>(null);
+	let aiLoading = $state(false);
+	let aiError = $state<string | null>(null);
 
 	const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -22,6 +27,30 @@
 		};
 	}
 
+	async function runAIAnalysis(chatData: ChatData, statistics: Statistics) {
+		aiLoading = true;
+		aiError = null;
+		try {
+			const samples = sampleMessages(chatData);
+			const res = await fetch('/api/analyze', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ statistics, sampleMessages: samples })
+			});
+			const data: AnalyzeResponse = await res.json();
+			if (!data.success || !data.analysis) {
+				aiError = data.error ?? 'AI 분석에 실패했습니다.';
+				return;
+			}
+			aiAnalysis = data.analysis;
+		} catch (e) {
+			console.error(e);
+			aiError = '네트워크 오류가 발생했습니다.';
+		} finally {
+			aiLoading = false;
+		}
+	}
+
 	onMount(() => {
 		try {
 			const stored = sessionStorage.getItem('toksim:chatData');
@@ -30,12 +59,22 @@
 				return;
 			}
 			const chatData = reviveChatData(stored);
+			chatDataRef = chatData;
 			stats = analyzeStatistics(chatData);
+			runAIAnalysis(chatData, stats);
 		} catch (e) {
 			error = '데이터를 불러오는 중 오류가 발생했습니다.';
 			console.error(e);
 		}
 	});
+
+	function temperatureColor(t: number): string {
+		if (t >= 80) return '#ff4757';
+		if (t >= 60) return '#ff7f50';
+		if (t >= 40) return '#ffc048';
+		if (t >= 20) return '#70a1ff';
+		return '#5352ed';
+	}
 
 	function goHome() {
 		goto('/');
@@ -78,6 +117,61 @@
 			<button onclick={goHome}>홈으로 돌아가기</button>
 		</div>
 	{:else if stats}
+		<section class="ai-section">
+			{#if aiLoading}
+				<div class="ai-loading">
+					<div class="spinner"></div>
+					<p>AI가 대화를 분석 중입니다...</p>
+					<p class="muted-small">보통 5~10초 정도 걸려요</p>
+				</div>
+			{:else if aiError}
+				<div class="ai-error">
+					<p>🤖 {aiError}</p>
+					<p class="muted-small">아래 기본 통계는 정상적으로 확인하실 수 있습니다.</p>
+				</div>
+			{:else if aiAnalysis}
+				<div class="ai-summary">
+					<p class="one-liner">"{aiAnalysis.oneLineSummary}"</p>
+				</div>
+
+				<div class="temperature">
+					<div class="temp-label">
+						<span>💬 대화 온도</span>
+						<strong>{aiAnalysis.conversationTemperature}°</strong>
+					</div>
+					<div class="temp-bar">
+						<div
+							class="temp-fill"
+							style="width: {aiAnalysis.conversationTemperature}%; background: {temperatureColor(
+								aiAnalysis.conversationTemperature
+							)};"
+						></div>
+					</div>
+				</div>
+
+				<div class="relationship">
+					<h3>관계 역학</h3>
+					<p>{aiAnalysis.relationshipDynamic}</p>
+				</div>
+
+				<div class="personas">
+					{#each aiAnalysis.participants as p (p.name)}
+						<div class="persona">
+							<div class="persona-header">
+								<strong>{p.name}</strong>
+								<span class="style-badge">{p.speechStyle}</span>
+							</div>
+							<div class="keywords">
+								{#each p.personalityKeywords as k (k)}
+									<span class="keyword">#{k}</span>
+								{/each}
+							</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</section>
+
 		<section class="summary">
 			<div class="stat-card">
 				<div class="stat-value">{stats.totalMessages.toLocaleString()}</div>
@@ -176,7 +270,7 @@
 			</div>
 		</section>
 
-		<p class="footnote">AI 분석 기능은 3일차에 추가될 예정입니다.</p>
+		<p class="footnote">톡심 - 카카오톡 대화 AI 분석</p>
 	{:else}
 		<p class="loading">분석 중...</p>
 	{/if}
@@ -456,6 +550,167 @@
 		text-align: center;
 		color: #888;
 		padding: 3rem 0;
+	}
+
+	.ai-section {
+		background: linear-gradient(135deg, #fffbe6 0%, #fff0f5 100%);
+		border: 2px solid #fee500;
+		border-radius: 16px;
+		padding: 1.5rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.ai-loading {
+		text-align: center;
+		padding: 1.5rem 0;
+	}
+
+	.spinner {
+		display: inline-block;
+		width: 32px;
+		height: 32px;
+		border: 3px solid #e5e5e5;
+		border-top-color: #fee500;
+		border-radius: 50%;
+		animation: spin 0.9s linear infinite;
+		margin-bottom: 0.75rem;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.ai-loading p {
+		margin: 0.25rem 0;
+		color: #555;
+	}
+
+	.muted-small {
+		font-size: 0.8rem;
+		color: #999;
+	}
+
+	.ai-error {
+		text-align: center;
+		padding: 1rem 0;
+		color: #666;
+	}
+
+	.ai-error p {
+		margin: 0.25rem 0;
+	}
+
+	.ai-summary {
+		text-align: center;
+		margin-bottom: 1.5rem;
+	}
+
+	.one-liner {
+		font-size: 1.15rem;
+		font-weight: 600;
+		color: #3c1e1e;
+		line-height: 1.5;
+		margin: 0;
+		padding: 0.5rem;
+	}
+
+	.temperature {
+		margin-bottom: 1.5rem;
+	}
+
+	.temp-label {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
+		font-size: 0.95rem;
+		color: #555;
+	}
+
+	.temp-label strong {
+		font-size: 1.25rem;
+		color: #3c1e1e;
+	}
+
+	.temp-bar {
+		height: 14px;
+		background: #e5e5e5;
+		border-radius: 7px;
+		overflow: hidden;
+	}
+
+	.temp-fill {
+		height: 100%;
+		border-radius: 7px;
+		transition: width 0.8s ease-out;
+	}
+
+	.relationship {
+		background: white;
+		border-radius: 10px;
+		padding: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.relationship h3 {
+		margin: 0 0 0.5rem;
+		font-size: 0.9rem;
+		color: #888;
+		font-weight: 600;
+	}
+
+	.relationship p {
+		margin: 0;
+		font-size: 1rem;
+		color: #333;
+		line-height: 1.5;
+	}
+
+	.personas {
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	.persona {
+		background: white;
+		border-radius: 10px;
+		padding: 1rem;
+	}
+
+	.persona-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.5rem;
+	}
+
+	.persona-header strong {
+		font-size: 1.05rem;
+	}
+
+	.style-badge {
+		background: #fee500;
+		color: #3c1e1e;
+		font-size: 0.8rem;
+		padding: 0.25rem 0.6rem;
+		border-radius: 12px;
+		font-weight: 600;
+	}
+
+	.keywords {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+
+	.keyword {
+		background: #f0f0f0;
+		color: #555;
+		font-size: 0.85rem;
+		padding: 0.25rem 0.6rem;
+		border-radius: 12px;
 	}
 
 	@media (max-width: 480px) {

@@ -58,6 +58,30 @@ export interface WordCount {
 	count: number;
 }
 
+export interface ParticipantPersona {
+	name: string;
+	speechStyle: string;
+	personalityKeywords: string[];
+}
+
+export interface AIAnalysis {
+	participants: ParticipantPersona[];
+	conversationTemperature: number;
+	relationshipDynamic: string;
+	oneLineSummary: string;
+}
+
+export interface AnalyzeRequest {
+	statistics: Statistics;
+	sampleMessages: { sender: string; content: string; timestamp: string }[];
+}
+
+export interface AnalyzeResponse {
+	success: boolean;
+	analysis?: AIAnalysis;
+	error?: string;
+}
+
 export interface Statistics {
 	totalMessages: number;
 	totalDays: number;
