@@ -42,8 +42,14 @@ export function parseKakaoChat(raw: string): ParseResult {
 
 	const lines = raw.split(/\r?\n/);
 	const messages: Message[] = [];
-	let currentDate: { year: number; month: number; day: number } | null = null;
+	const today = new Date();
+	let currentDate: { year: number; month: number; day: number } = {
+		year: today.getFullYear(),
+		month: today.getMonth() + 1,
+		day: today.getDate()
+	};
 	let lastMessage: Message | null = null;
+	let prevHour = -1;
 
 	for (const rawLine of lines) {
 		const line = rawLine.trimEnd();
@@ -56,6 +62,7 @@ export function parseKakaoChat(raw: string): ParseResult {
 				month: parseInt(dateMatch[2], 10),
 				day: parseInt(dateMatch[3], 10)
 			};
+			prevHour = -1;
 			lastMessage = null;
 			continue;
 		}
@@ -66,9 +73,18 @@ export function parseKakaoChat(raw: string): ParseResult {
 		}
 
 		const pcMatch = line.match(PC_MESSAGE_RE);
-		if (pcMatch && currentDate) {
+		if (pcMatch) {
 			const [, sender, ampm, hourStr, minStr, content] = pcMatch;
 			const hour = to24Hour(ampm, parseInt(hourStr, 10));
+			if (prevHour !== -1 && hour + 2 < prevHour) {
+				const next = new Date(currentDate.year, currentDate.month - 1, currentDate.day + 1);
+				currentDate = {
+					year: next.getFullYear(),
+					month: next.getMonth() + 1,
+					day: next.getDate()
+				};
+			}
+			prevHour = hour;
 			const timestamp = new Date(
 				currentDate.year,
 				currentDate.month - 1,
