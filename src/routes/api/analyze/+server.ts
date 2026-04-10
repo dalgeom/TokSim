@@ -3,8 +3,9 @@ import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 import type { AIAnalysis, AnalyzeRequest, AnalyzeResponse, Statistics } from '$lib/types';
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
 
 function buildPrompt(stats: Statistics, samples: AnalyzeRequest['sampleMessages']): string {
 	const participantLines = stats.participants
@@ -88,46 +89,55 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	}
 
 	const prompt = buildPrompt(payload.statistics, payload.sampleMessages);
-
-	try {
-		const geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				contents: [{ parts: [{ text: prompt }] }],
-				generationConfig: {
-					temperature: 0.8,
-					responseMimeType: 'application/json'
-				}
-			})
-		});
-
-		if (!geminiRes.ok) {
-			const errText = await geminiRes.text();
-			console.error('Gemini API error:', geminiRes.status, errText);
-			const body: AnalyzeResponse = {
-				success: false,
-				error: `Gemini ${geminiRes.status}: ${errText.slice(0, 500)}`
-			};
-			return json(body, { status: 502 });
+	const requestBody = JSON.stringify({
+		contents: [{ parts: [{ text: prompt }] }],
+		generationConfig: {
+			temperature: 0.8,
+			responseMimeType: 'application/json'
 		}
+	});
 
-		const geminiJson = await geminiRes.json();
-		const text = geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text;
-		if (!text || typeof text !== 'string') {
-			const body: AnalyzeResponse = { success: false, error: 'AI 응답이 비어있습니다.' };
-			return json(body, { status: 502 });
+	const attemptErrors: string[] = [];
+
+	for (const model of GEMINI_MODELS) {
+		try {
+			const geminiRes = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: requestBody
+			});
+
+			if (!geminiRes.ok) {
+				const errText = await geminiRes.text();
+				console.error(`Gemini ${model} error:`, geminiRes.status, errText);
+				attemptErrors.push(`${model}:${geminiRes.status}`);
+				if (RETRYABLE_STATUSES.has(geminiRes.status)) continue;
+				const body: AnalyzeResponse = {
+					success: false,
+					error: `Gemini ${geminiRes.status}: ${errText.slice(0, 300)}`
+				};
+				return json(body, { status: 502 });
+			}
+
+			const geminiJson = await geminiRes.json();
+			const text = geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+			if (!text || typeof text !== 'string') {
+				attemptErrors.push(`${model}:empty`);
+				continue;
+			}
+
+			const analysis = parseAIResponse(text);
+			const body: AnalyzeResponse = { success: true, analysis };
+			return json(body);
+		} catch (e) {
+			console.error(`analyze ${model} error:`, e);
+			attemptErrors.push(`${model}:${e instanceof Error ? e.message : 'unknown'}`);
 		}
-
-		const analysis = parseAIResponse(text);
-		const body: AnalyzeResponse = { success: true, analysis };
-		return json(body);
-	} catch (e) {
-		console.error('analyze endpoint error:', e);
-		const body: AnalyzeResponse = {
-			success: false,
-			error: e instanceof Error ? e.message : 'AI 분석 중 알 수 없는 오류가 발생했습니다.'
-		};
-		return json(body, { status: 500 });
 	}
+
+	const body: AnalyzeResponse = {
+		success: false,
+		error: `모든 AI 모델이 일시적으로 응답하지 못하고 있습니다. 잠시 후 다시 시도해주세요. (${attemptErrors.join(', ')})`
+	};
+	return json(body, { status: 502 });
 };
