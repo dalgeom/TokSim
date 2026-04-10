@@ -1,4 +1,12 @@
-export type MessageType = 'text' | 'photo' | 'video' | 'emoticon' | 'file' | 'system';
+export type MessageType =
+	| 'text'
+	| 'photo'
+	| 'video'
+	| 'emoticon'
+	| 'voice'
+	| 'file'
+	| 'deleted'
+	| 'system';
 
 export interface Message {
 	timestamp: Date;

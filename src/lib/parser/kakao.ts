@@ -24,11 +24,17 @@ function to24Hour(ampm: string, hour: number): number {
 
 function detectType(content: string): MessageType {
 	const trimmed = content.trim();
-	if (trimmed === '사진' || /^사진\s*\d+장$/.test(trimmed) || /^<사진\s*\d*장?>$/.test(trimmed))
+	if (
+		trimmed === '사진' ||
+		/^사진\s*\d+장$/.test(trimmed) ||
+		/^<사진(\s*\d+장)?>$/.test(trimmed)
+	)
 		return 'photo';
-	if (trimmed === '동영상') return 'video';
-	if (trimmed === '이모티콘') return 'emoticon';
-	if (/^파일\s*:/.test(trimmed) || trimmed === '파일') return 'file';
+	if (trimmed === '동영상' || trimmed === '<동영상>') return 'video';
+	if (trimmed === '이모티콘' || trimmed === '<이모티콘>') return 'emoticon';
+	if (trimmed === '음성메시지' || trimmed === '<음성메시지>') return 'voice';
+	if (trimmed === '삭제된 메시지입니다.' || trimmed === '삭제된 메시지입니다') return 'deleted';
+	if (/^파일\s*:/.test(trimmed) || trimmed === '파일' || trimmed === '<파일>') return 'file';
 	return 'text';
 }
 
