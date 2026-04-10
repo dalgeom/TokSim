@@ -61,3 +61,16 @@ npx wrangler pages deploy .svelte-kit/cloudflare   # Cloudflare 배포
 ```
 GEMINI_API_KEY=       # Google Gemini API 키 (Cloudflare Pages 환경변수로 설정)
 ```
+
+## 작업 기록 규칙
+- 매 개발 일차 종료 시 `worklog/dayNN.md` 파일을 작성한다 (예: `worklog/day01.md`).
+- 포함할 섹션: **목표 / 완료한 작업(파일별) / 발견+수정한 버그 / 검증 결과 / 커밋 히스토리 / 미처리 과제 / 다음 날 시작 지점**.
+- 파일 참조는 상대 경로 markdown 링크로 작성한다 (`[kakao.ts](../src/lib/parser/kakao.ts)`).
+- `CLAUDE.md` / `PLAN.md`는 매일 갱신하지 않는다 — 구조나 방향이 바뀔 때만 수정.
+- 작업일지는 **별도 커밋**으로 push하여 개발 커밋과 분리한다.
+- 새 세션을 시작할 때는 가장 최근 `worklog/dayNN.md`를 먼저 읽고 맥락을 파악한다.
+
+## 배포
+- `main` 브랜치에 push하면 Cloudflare Pages가 자동으로 빌드 + 배포한다.
+- 프로덕션 URL: https://toksim.pages.dev
+- Cloudflare Pages 프로젝트명: `toksim`
