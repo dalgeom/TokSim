@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { GEMINI_API_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 import type { AIAnalysis, AnalyzeRequest, AnalyzeResponse, Statistics } from '$lib/types';
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 function buildPrompt(stats: Statistics, samples: AnalyzeRequest['sampleMessages']): string {
@@ -61,8 +61,12 @@ function parseAIResponse(text: string): AIAnalysis {
 	return parsed as AIAnalysis;
 }
 
-export const POST: RequestHandler = async ({ request }) => {
-	if (!GEMINI_API_KEY) {
+export const POST: RequestHandler = async ({ request, platform }) => {
+	const apiKey =
+		env.GEMINI_API_KEY ??
+		(platform as { env?: { GEMINI_API_KEY?: string } } | undefined)?.env?.GEMINI_API_KEY;
+
+	if (!apiKey) {
 		const body: AnalyzeResponse = {
 			success: false,
 			error: 'API 키가 설정되지 않았습니다.'
@@ -86,7 +90,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const prompt = buildPrompt(payload.statistics, payload.sampleMessages);
 
 	try {
-		const geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${GEMINI_API_KEY}`, {
+		const geminiRes = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -103,10 +107,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			console.error('Gemini API error:', geminiRes.status, errText);
 			const body: AnalyzeResponse = {
 				success: false,
-				error:
-					geminiRes.status === 429
-						? '오늘의 AI 분석 한도를 초과했습니다. 잠시 후 다시 시도해주세요.'
-						: 'AI 분석 중 오류가 발생했습니다.'
+				error: `Gemini ${geminiRes.status}: ${errText.slice(0, 500)}`
 			};
 			return json(body, { status: 502 });
 		}
