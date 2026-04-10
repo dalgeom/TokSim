@@ -219,10 +219,17 @@ export function analyzeStatistics(data: ChatData): Statistics {
 	const startDate = data.startDate;
 	const endDate = data.endDate;
 	const dayMs = 24 * 60 * 60 * 1000;
-	const totalDays = Math.max(
-		1,
-		Math.ceil((endDate.getTime() - startDate.getTime()) / dayMs) + 1
-	);
+	const startMidnight = new Date(
+		startDate.getFullYear(),
+		startDate.getMonth(),
+		startDate.getDate()
+	).getTime();
+	const endMidnight = new Date(
+		endDate.getFullYear(),
+		endDate.getMonth(),
+		endDate.getDate()
+	).getTime();
+	const totalDays = Math.round((endMidnight - startMidnight) / dayMs) + 1;
 
 	return {
 		totalMessages: total,
