@@ -1,14 +1,30 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { parseKakaoChat } from '$lib/parser/kakao';
-	import type { ParseResult } from '$lib/types';
 
 	let rawText = $state('');
-	let result = $state<ParseResult | null>(null);
+	let errorMsg = $state<string | null>(null);
+	let isProcessing = $state(false);
 
 	function handleAnalyze() {
-		result = parseKakaoChat(rawText);
-		if (result.success && result.data) {
-			console.log('파싱 결과:', result.data);
+		if (!rawText.trim() || isProcessing) return;
+		isProcessing = true;
+		errorMsg = null;
+
+		const result = parseKakaoChat(rawText);
+		if (!result.success || !result.data) {
+			errorMsg = result.error ?? '파싱에 실패했습니다.';
+			isProcessing = false;
+			return;
+		}
+
+		try {
+			sessionStorage.setItem('toksim:chatData', JSON.stringify(result.data));
+			goto('/result');
+		} catch (e) {
+			errorMsg = '데이터를 저장할 수 없습니다. 대화량을 줄여보세요.';
+			console.error(e);
+			isProcessing = false;
 		}
 	}
 </script>
@@ -21,7 +37,7 @@
 <main>
 	<header>
 		<h1>톡심 <span class="subtitle">TokSim</span></h1>
-		<p class="tagline">카카오톡 대화를 붙여넣으면 AI가 말투와 관계를 분석해드려요</p>
+		<p class="tagline">카카오톡 대화를 붙여넣으면 말투와 관계를 분석해드려요</p>
 	</header>
 
 	<section class="input-section">
@@ -29,36 +45,27 @@
 			bind:value={rawText}
 			placeholder="여기에 카카오톡 대화를 붙여넣으세요.&#10;&#10;예시:&#10;[홍길동] [오후 3:42] 안녕하세요&#10;[김철수] [오후 3:43] 네 반가워요!"
 			rows="12"
+			disabled={isProcessing}
 		></textarea>
 
-		<button onclick={handleAnalyze} disabled={!rawText.trim()}>분석하기</button>
+		{#if errorMsg}
+			<p class="error">{errorMsg}</p>
+		{/if}
+
+		<button onclick={handleAnalyze} disabled={!rawText.trim() || isProcessing}>
+			{isProcessing ? '분석 중...' : '분석하기'}
+		</button>
 	</section>
 
-	{#if result}
-		<section class="result-section">
-			{#if result.success && result.data}
-				<h2>파싱 결과 (1일차 임시 표시)</h2>
-				<ul>
-					<li>전체 메시지: <strong>{result.data.messages.length}개</strong></li>
-					<li>
-						참여자: <strong
-							>{result.data.participants.map((p) => `${p.name}(${p.messageCount})`).join(', ')}</strong
-						>
-					</li>
-					<li>
-						기간: <strong
-							>{result.data.startDate.toLocaleDateString('ko-KR')} ~ {result.data.endDate.toLocaleDateString(
-								'ko-KR'
-							)}</strong
-						>
-					</li>
-				</ul>
-				<p class="hint">자세한 구조는 브라우저 콘솔(F12)에서 확인하세요.</p>
-			{:else}
-				<p class="error">{result.error}</p>
-			{/if}
-		</section>
-	{/if}
+	<section class="help">
+		<h2>어떻게 사용하나요?</h2>
+		<ol>
+			<li>카카오톡 대화방에서 분석하고 싶은 대화를 선택해 복사하세요.</li>
+			<li>PC 카톡은 대화 내보내기 → 텍스트 파일을 열어 복사해도 됩니다.</li>
+			<li>위 입력창에 붙여넣고 "분석하기"를 누르세요.</li>
+			<li>대화 내용은 서버에 저장되지 않습니다.</li>
+		</ol>
+	</section>
 </main>
 
 <style>
@@ -115,6 +122,10 @@
 		border-color: #fee500;
 	}
 
+	textarea:disabled {
+		background: #f5f5f5;
+	}
+
 	button {
 		padding: 1rem;
 		background: #fee500;
@@ -136,33 +147,30 @@
 		cursor: not-allowed;
 	}
 
-	.result-section {
-		margin-top: 2rem;
+	.error {
+		color: #c00;
+		margin: 0;
+		padding: 0.75rem;
+		background: #fee;
+		border-radius: 8px;
+		font-size: 0.9rem;
+	}
+
+	.help {
+		margin-top: 3rem;
 		padding: 1.5rem;
 		background: #f8f8f8;
 		border-radius: 12px;
 	}
 
-	.result-section h2 {
+	.help h2 {
 		margin-top: 0;
-		font-size: 1.25rem;
+		font-size: 1.1rem;
 	}
 
-	.result-section ul {
+	.help ol {
 		padding-left: 1.2rem;
-	}
-
-	.result-section li {
-		margin: 0.5rem 0;
-	}
-
-	.hint {
-		color: #888;
-		font-size: 0.9rem;
-	}
-
-	.error {
-		color: #c00;
-		margin: 0;
+		color: #555;
+		line-height: 1.7;
 	}
 </style>
