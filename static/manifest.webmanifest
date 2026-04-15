@@ -1,0 +1,36 @@
+{
+	"name": "톡심 - 카카오톡 대화 분석",
+	"short_name": "톡심",
+	"description": "카카오톡 대화를 AI가 분석해주는 웹 서비스",
+	"start_url": "/",
+	"scope": "/",
+	"display": "standalone",
+	"orientation": "portrait",
+	"background_color": "#ffffff",
+	"theme_color": "#fee500",
+	"lang": "ko-KR",
+	"icons": [
+		{
+			"src": "/icon.svg",
+			"sizes": "any",
+			"type": "image/svg+xml",
+			"purpose": "any maskable"
+		}
+	],
+	"share_target": {
+		"action": "/share",
+		"method": "POST",
+		"enctype": "multipart/form-data",
+		"params": {
+			"title": "title",
+			"text": "text",
+			"url": "url",
+			"files": [
+				{
+					"name": "file",
+					"accept": ["text/plain", ".txt"]
+				}
+			]
+		}
+	}
+}
