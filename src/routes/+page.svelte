@@ -158,31 +158,34 @@
 
 		<div class="guide-content">
 			{#if activeGuide === 'android'}
-				<h3>방법 1: 대화 복사해서 붙여넣기</h3>
-				<ol>
-					<li>카톡 대화방에서 메시지를 길게 눌러 선택 → 추가로 드래그해서 범위 확장</li>
-					<li>나타나는 메뉴에서 <strong>복사</strong> 탭</li>
-					<li>톡심 입력창을 길게 눌러 <strong>붙여넣기</strong></li>
-				</ol>
+				<p class="callout">
+					📱 모바일 카톡은 한 번에 <strong>한 메시지씩만</strong> 복사할 수 있어요. 여러
+					메시지를 분석하려면 <strong>txt 파일 업로드</strong>가 사실상 유일한 방법입니다.
+				</p>
 
-				<h3>방법 2: txt 파일 업로드 (권장, 더 많은 대화 한 번에)</h3>
+				<h3>txt 파일 업로드 (권장)</h3>
 				<ol>
 					<li>카톡 대화방 우측 상단 <strong>☰</strong> 메뉴 탭</li>
 					<li>톱니바퀴 <strong>⚙️ 설정</strong> 탭</li>
 					<li><strong>대화 내용 내보내기</strong> 선택</li>
 					<li><strong>텍스트만 보내기</strong> 선택</li>
-					<li>공유 시트에서 <strong>"파일에 저장"</strong>(내 파일/드라이브 등)으로 저장</li>
+					<li>공유 시트에서 <strong>"파일에 저장"</strong>(내 파일 / 드라이브 등)으로 저장</li>
 					<li>위의 <strong>"📎 txt 파일 업로드"</strong> 버튼으로 저장한 파일 선택</li>
 				</ol>
-			{:else if activeGuide === 'ios'}
-				<h3>방법 1: 대화 복사해서 붙여넣기</h3>
-				<ol>
-					<li>카톡 대화방에서 메시지를 길게 눌러 선택 → <strong>복사</strong></li>
-					<li>(선택 범위가 좁으면) 대화 길게 눌러 전체 선택 후 복사</li>
-					<li>톡심 입력창을 길게 눌러 <strong>붙여넣기</strong></li>
-				</ol>
 
-				<h3>방법 2: txt 파일 업로드 (권장)</h3>
+				<h3 class="minor">한 메시지만 확인하고 싶다면</h3>
+				<ol>
+					<li>대화방에서 메시지를 <strong>길게 눌러</strong> 메뉴 띄우기</li>
+					<li><strong>복사</strong> 탭</li>
+					<li>톡심 입력창 길게 눌러 <strong>붙여넣기</strong></li>
+				</ol>
+			{:else if activeGuide === 'ios'}
+				<p class="callout">
+					📱 모바일 카톡은 한 번에 <strong>한 메시지씩만</strong> 복사할 수 있어요. 여러
+					메시지를 분석하려면 <strong>txt 파일 업로드</strong>가 사실상 유일한 방법입니다.
+				</p>
+
+				<h3>txt 파일 업로드 (권장)</h3>
 				<ol>
 					<li>카톡 대화방 우측 상단 <strong>☰</strong> 메뉴 탭</li>
 					<li>톱니바퀴 <strong>⚙️ 설정</strong> 탭</li>
@@ -191,20 +194,36 @@
 					<li>공유 시트에서 <strong>"파일에 저장"</strong>(iCloud Drive / 내 iPhone) 선택</li>
 					<li>톡심 <strong>"📎 txt 파일 업로드"</strong> 버튼으로 저장한 파일 선택</li>
 				</ol>
+
+				<h3 class="minor">한 메시지만 확인하고 싶다면</h3>
+				<ol>
+					<li>대화방에서 메시지를 <strong>길게 눌러</strong> 메뉴 띄우기</li>
+					<li><strong>복사</strong> 탭</li>
+					<li>톡심 입력창 길게 눌러 <strong>붙여넣기</strong></li>
+				</ol>
 			{:else}
+				<p class="callout">
+					💻 PC 카톡은 여러 메시지를 한 번에 드래그 선택해서 복사할 수 있어요. 짧은 구간만 볼
+					거면 드래그 복사가 편하고, 전체 대화를 분석할 거면 txt 파일 업로드가 깔끔합니다.
+				</p>
+
 				<h3>방법 1: 대화 드래그해서 복사 붙여넣기</h3>
 				<ol>
 					<li>PC 카카오톡 대화방 열기</li>
-					<li>마우스로 원하는 대화 범위 드래그 선택</li>
+					<li>마우스로 원하는 대화 범위 <strong>드래그 선택</strong></li>
 					<li>우클릭 → <strong>복사</strong> (또는 Ctrl+C)</li>
 					<li>톡심 입력창에 <strong>붙여넣기</strong> (Ctrl+V)</li>
 				</ol>
 
-				<h3>방법 2: txt 파일 업로드 (권장, 전체 대화)</h3>
+				<h3>방법 2: txt 파일 업로드 (전체 대화 분석 시 권장)</h3>
 				<ol>
 					<li>PC 카톡 대화창 우측 상단 <strong>⋮</strong> 메뉴 → <strong>대화 내용 내보내기</strong></li>
 					<li>저장 위치 선택하고 <strong>.txt 파일</strong>로 저장</li>
-					<li>위의 <strong>"📎 txt 파일 업로드"</strong> 버튼으로 선택하거나, 입력창에 파일을 <strong>드래그&드롭</strong></li>
+					<li>
+						위의 <strong>"📎 txt 파일 업로드"</strong> 버튼으로 선택하거나, 입력창에 파일을 <strong
+							>드래그&드롭</strong
+						>
+					</li>
 				</ol>
 			{/if}
 		</div>
@@ -444,5 +463,22 @@
 
 	.guide-content h3:first-child {
 		margin-top: 0;
+	}
+
+	.guide-content h3.minor {
+		color: #888;
+		font-size: 0.88rem;
+		margin-top: 1.5rem;
+	}
+
+	.callout {
+		background: #fff8e1;
+		border-left: 3px solid #fee500;
+		padding: 0.7rem 0.9rem;
+		border-radius: 6px;
+		margin: 0 0 1rem;
+		font-size: 0.9rem;
+		line-height: 1.55;
+		color: #555;
 	}
 </style>
