@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { parseKakaoChat } from '$lib/parser/kakao';
 
@@ -8,14 +7,6 @@
 	let isProcessing = $state(false);
 	let isDragging = $state(false);
 	let activeGuide = $state<'android' | 'ios' | 'pc'>('android');
-
-	onMount(() => {
-		const shared = sessionStorage.getItem('toksim:sharedText');
-		if (shared && shared.trim()) {
-			rawText = shared;
-			sessionStorage.removeItem('toksim:sharedText');
-		}
-	});
 
 	async function readFile(file: File): Promise<string> {
 		if (!file.name.toLowerCase().endsWith('.txt') && file.type !== 'text/plain') {
@@ -137,6 +128,10 @@
 	<section class="help">
 		<h2>대화를 어떻게 가져오나요?</h2>
 
+		<p class="intro">
+			두 가지 방법이 있어요: <strong>대화 복사해서 붙여넣기</strong> 또는 <strong>txt 파일 업로드</strong>.
+		</p>
+
 		<div class="tabs" role="tablist">
 			<button
 				class="tab"
@@ -163,36 +158,53 @@
 
 		<div class="guide-content">
 			{#if activeGuide === 'android'}
+				<h3>방법 1: 대화 복사해서 붙여넣기</h3>
 				<ol>
-					<li>카톡 대화방에서 우측 상단 <strong>☰</strong> 메뉴 탭</li>
-					<li>톱니바퀴 <strong>⚙️ 설정</strong> 아이콘 탭</li>
+					<li>카톡 대화방에서 메시지를 길게 눌러 선택 → 추가로 드래그해서 범위 확장</li>
+					<li>나타나는 메뉴에서 <strong>복사</strong> 탭</li>
+					<li>톡심 입력창을 길게 눌러 <strong>붙여넣기</strong></li>
+				</ol>
+
+				<h3>방법 2: txt 파일 업로드 (권장, 더 많은 대화 한 번에)</h3>
+				<ol>
+					<li>카톡 대화방 우측 상단 <strong>☰</strong> 메뉴 탭</li>
+					<li>톱니바퀴 <strong>⚙️ 설정</strong> 탭</li>
 					<li><strong>대화 내용 내보내기</strong> 선택</li>
 					<li><strong>텍스트만 보내기</strong> 선택</li>
-					<li>공유 시트에서 <strong>"파일에 저장"</strong> 또는 메모/드라이브로 저장</li>
-					<li>위 <strong>"📎 txt 파일 업로드"</strong> 버튼으로 방금 저장한 파일을 선택하세요</li>
+					<li>공유 시트에서 <strong>"파일에 저장"</strong>(내 파일/드라이브 등)으로 저장</li>
+					<li>위의 <strong>"📎 txt 파일 업로드"</strong> 버튼으로 저장한 파일 선택</li>
 				</ol>
 			{:else if activeGuide === 'ios'}
-				<p class="note">
-					💡 <strong>아이폰은 Safari로 접속하세요.</strong> iOS Chrome/다른 브라우저는 Apple 정책상 PWA 설치와 파일 업로드 기능이 제한됩니다.
-				</p>
+				<h3>방법 1: 대화 복사해서 붙여넣기</h3>
 				<ol>
-					<li>카톡 대화방에서 우측 상단 <strong>☰</strong> 메뉴 탭</li>
-					<li>톱니바퀴 <strong>⚙️ 설정</strong> 아이콘 탭</li>
+					<li>카톡 대화방에서 메시지를 길게 눌러 선택 → <strong>복사</strong></li>
+					<li>(선택 범위가 좁으면) 대화 길게 눌러 전체 선택 후 복사</li>
+					<li>톡심 입력창을 길게 눌러 <strong>붙여넣기</strong></li>
+				</ol>
+
+				<h3>방법 2: txt 파일 업로드 (권장)</h3>
+				<ol>
+					<li>카톡 대화방 우측 상단 <strong>☰</strong> 메뉴 탭</li>
+					<li>톱니바퀴 <strong>⚙️ 설정</strong> 탭</li>
 					<li><strong>대화 내용 내보내기</strong> 선택</li>
 					<li><strong>텍스트로 공유</strong> 선택</li>
-					<li>공유 시트에서 <strong>"파일에 저장"</strong> 선택 (iCloud Drive 등)</li>
-					<li>Safari에서 톡심을 열고 위 <strong>"📎 txt 파일 업로드"</strong> 버튼으로 저장한 파일을 선택하세요</li>
-					<li>
-						(선택) Safari 공유 버튼 → <strong>"홈 화면에 추가"</strong>로 톡심을 아이콘으로 설치하면 앱처럼 빠르게 열 수 있습니다
-					</li>
+					<li>공유 시트에서 <strong>"파일에 저장"</strong>(iCloud Drive / 내 iPhone) 선택</li>
+					<li>톡심 <strong>"📎 txt 파일 업로드"</strong> 버튼으로 저장한 파일 선택</li>
 				</ol>
 			{:else}
+				<h3>방법 1: 대화 드래그해서 복사 붙여넣기</h3>
 				<ol>
-					<li>PC 카카오톡에서 분석할 대화방 열기</li>
-					<li>대화창 우측 상단 <strong>⋮</strong> (또는 톱니) 메뉴 → <strong>대화 내용 내보내기</strong></li>
+					<li>PC 카카오톡 대화방 열기</li>
+					<li>마우스로 원하는 대화 범위 드래그 선택</li>
+					<li>우클릭 → <strong>복사</strong> (또는 Ctrl+C)</li>
+					<li>톡심 입력창에 <strong>붙여넣기</strong> (Ctrl+V)</li>
+				</ol>
+
+				<h3>방법 2: txt 파일 업로드 (권장, 전체 대화)</h3>
+				<ol>
+					<li>PC 카톡 대화창 우측 상단 <strong>⋮</strong> 메뉴 → <strong>대화 내용 내보내기</strong></li>
 					<li>저장 위치 선택하고 <strong>.txt 파일</strong>로 저장</li>
-					<li>위 <strong>"📎 txt 파일 업로드"</strong>에 저장한 파일을 넣거나, 입력창에 드래그&드롭해도 됩니다</li>
-					<li>또는 대화창에서 메시지를 드래그 선택 → 복사 → 위 입력창에 붙여넣기도 가능합니다</li>
+					<li>위의 <strong>"📎 txt 파일 업로드"</strong> 버튼으로 선택하거나, 입력창에 파일을 <strong>드래그&드롭</strong></li>
 				</ol>
 			{/if}
 		</div>
@@ -418,14 +430,19 @@
 		text-align: center;
 	}
 
-	.note {
-		background: #fff8e1;
-		border-left: 3px solid #fee500;
-		padding: 0.6rem 0.8rem;
-		border-radius: 6px;
-		margin: 0 0 0.75rem;
-		font-size: 0.88rem;
-		line-height: 1.5;
+	.intro {
 		color: #555;
+		margin: 0 0 1rem;
+		font-size: 0.92rem;
+	}
+
+	.guide-content h3 {
+		margin: 1rem 0 0.4rem;
+		font-size: 0.95rem;
+		color: #3c1e1e;
+	}
+
+	.guide-content h3:first-child {
+		margin-top: 0;
 	}
 </style>
