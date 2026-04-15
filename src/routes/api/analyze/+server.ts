@@ -114,7 +114,12 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 				if (RETRYABLE_STATUSES.has(geminiRes.status)) continue;
 				const body: AnalyzeResponse = {
 					success: false,
-					error: `Gemini ${geminiRes.status}: ${errText.slice(0, 300)}`
+					error:
+						geminiRes.status === 400
+							? '요청 형식이 올바르지 않습니다.'
+							: geminiRes.status === 403
+								? 'AI 분석 권한 확인에 실패했습니다.'
+								: 'AI 분석 중 오류가 발생했습니다.'
 				};
 				return json(body, { status: 502 });
 			}
@@ -135,9 +140,10 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 		}
 	}
 
+	console.error('All Gemini models failed:', attemptErrors.join(', '));
 	const body: AnalyzeResponse = {
 		success: false,
-		error: `모든 AI 모델이 일시적으로 응답하지 못하고 있습니다. 잠시 후 다시 시도해주세요. (${attemptErrors.join(', ')})`
+		error: 'AI 분석 서비스가 일시적으로 혼잡합니다. 1~2분 후 다시 시도해주세요.'
 	};
 	return json(body, { status: 502 });
 };
