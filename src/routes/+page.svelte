@@ -172,13 +172,19 @@
 					<li>위 <strong>"📎 txt 파일 업로드"</strong> 버튼으로 방금 저장한 파일을 선택하세요</li>
 				</ol>
 			{:else if activeGuide === 'ios'}
+				<p class="note">
+					💡 <strong>아이폰은 Safari로 접속하세요.</strong> iOS Chrome/다른 브라우저는 Apple 정책상 PWA 설치와 파일 업로드 기능이 제한됩니다.
+				</p>
 				<ol>
 					<li>카톡 대화방에서 우측 상단 <strong>☰</strong> 메뉴 탭</li>
 					<li>톱니바퀴 <strong>⚙️ 설정</strong> 아이콘 탭</li>
 					<li><strong>대화 내용 내보내기</strong> 선택</li>
 					<li><strong>텍스트로 공유</strong> 선택</li>
 					<li>공유 시트에서 <strong>"파일에 저장"</strong> 선택 (iCloud Drive 등)</li>
-					<li>저장한 파일을 위 <strong>"📎 txt 파일 업로드"</strong> 버튼으로 선택하세요</li>
+					<li>Safari에서 톡심을 열고 위 <strong>"📎 txt 파일 업로드"</strong> 버튼으로 저장한 파일을 선택하세요</li>
+					<li>
+						(선택) Safari 공유 버튼 → <strong>"홈 화면에 추가"</strong>로 톡심을 아이콘으로 설치하면 앱처럼 빠르게 열 수 있습니다
+					</li>
 				</ol>
 			{:else}
 				<ol>
@@ -410,5 +416,16 @@
 		color: #888;
 		font-size: 0.85rem;
 		text-align: center;
+	}
+
+	.note {
+		background: #fff8e1;
+		border-left: 3px solid #fee500;
+		padding: 0.6rem 0.8rem;
+		border-radius: 6px;
+		margin: 0 0 0.75rem;
+		font-size: 0.88rem;
+		line-height: 1.5;
+		color: #555;
 	}
 </style>
