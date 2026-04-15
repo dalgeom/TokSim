@@ -49,12 +49,35 @@ export function parseKakaoChat(raw: string): ParseResult {
 
 	const lines = raw.split(/\r?\n/);
 	const messages: Message[] = [];
-	const today = new Date();
-	let currentDate: { year: number; month: number; day: number } = {
-		year: today.getFullYear(),
-		month: today.getMonth() + 1,
-		day: today.getDate()
-	};
+
+	let initialDate: { year: number; month: number; day: number } | null = null;
+	for (const rawLine of lines) {
+		const line = rawLine.trimEnd();
+		const m = line.match(DATE_HEADER_RE);
+		if (m) {
+			const headerDate = new Date(
+				parseInt(m[1], 10),
+				parseInt(m[2], 10) - 1,
+				parseInt(m[3], 10) - 1
+			);
+			initialDate = {
+				year: headerDate.getFullYear(),
+				month: headerDate.getMonth() + 1,
+				day: headerDate.getDate()
+			};
+			break;
+		}
+	}
+	if (!initialDate) {
+		const today = new Date();
+		initialDate = {
+			year: today.getFullYear(),
+			month: today.getMonth() + 1,
+			day: today.getDate()
+		};
+	}
+
+	let currentDate: { year: number; month: number; day: number } = initialDate;
 	let lastMessage: Message | null = null;
 	let prevHour = -1;
 
@@ -153,11 +176,19 @@ export function parseKakaoChat(raw: string): ParseResult {
 		.map(([name, messageCount]) => ({ name, messageCount }))
 		.sort((a, b) => b.messageCount - a.messageCount);
 
+	let minTime = messages[0].timestamp.getTime();
+	let maxTime = minTime;
+	for (const m of messages) {
+		const t = m.timestamp.getTime();
+		if (t < minTime) minTime = t;
+		if (t > maxTime) maxTime = t;
+	}
+
 	const data: ChatData = {
 		messages,
 		participants,
-		startDate: messages[0].timestamp,
-		endDate: messages[messages.length - 1].timestamp
+		startDate: new Date(minTime),
+		endDate: new Date(maxTime)
 	};
 
 	return { success: true, data };
