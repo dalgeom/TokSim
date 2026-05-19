@@ -3,12 +3,21 @@
 	import { parseKakaoChat } from '$lib/parser/kakao';
 	import { analyzeStatistics } from '$lib/analyzer/statistics';
 	import { sampleMessages } from '$lib/analyzer/sampler';
+	import ChatPreview from '$lib/components/ChatPreview.svelte';
 
 	let rawText = $state('');
 	let errorMsg = $state<string | null>(null);
 	let isProcessing = $state(false);
 	let isDragging = $state(false);
 	let activeGuide = $state<'android' | 'ios' | 'pc'>('android');
+	let showPreview = $state(true);
+	let textareaEl = $state<HTMLTextAreaElement | null>(null);
+
+	function activateTextarea() {
+		showPreview = false;
+		// 다음 프레임에서 textarea에 포커스
+		requestAnimationFrame(() => textareaEl?.focus());
+	}
 
 	async function readFile(file: File): Promise<string> {
 		if (!file.name.toLowerCase().endsWith('.txt') && file.type !== 'text/plain') {
@@ -24,6 +33,7 @@
 		errorMsg = null;
 		try {
 			rawText = await readFile(file);
+			showPreview = false;
 		} catch (e) {
 			errorMsg = e instanceof Error ? e.message : '파일을 읽을 수 없습니다.';
 		}
@@ -128,12 +138,18 @@
 			ondrop={onDrop}
 			role="presentation"
 		>
-			<textarea
-				bind:value={rawText}
-				placeholder="카카오톡 대화를 붙여넣거나, 아래 파일 업로드 버튼을 사용하세요.&#10;&#10;예시:&#10;[홍길동] [오후 3:42] 안녕하세요&#10;[김철수] [오후 3:43] 네 반가워요!"
-				rows="12"
-				disabled={isProcessing}
-			></textarea>
+			{#if showPreview && !rawText}
+				<ChatPreview onclick={activateTextarea} />
+			{:else}
+				<textarea
+					bind:this={textareaEl}
+					bind:value={rawText}
+					placeholder="카카오톡 대화를 여기에 붙여넣으세요"
+					rows="12"
+					disabled={isProcessing}
+					onfocus={() => (showPreview = false)}
+				></textarea>
+			{/if}
 			{#if isDragging}
 				<div class="drop-overlay">📂 파일을 놓아주세요</div>
 			{/if}
