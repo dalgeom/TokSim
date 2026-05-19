@@ -135,6 +135,7 @@ export function analyzeStatistics(data: ChatData): Statistics {
 	const wordCounts = new Map<string, number>();
 	const mediaTotals = { photo: 0, video: 0, emoticon: 0, voice: 0, file: 0 };
 
+	const tikitakaMap = new Map<string, Map<string, number>>();
 	let prev: Message | null = null;
 
 	for (const m of messages) {
@@ -179,6 +180,12 @@ export function analyzeStatistics(data: ChatData): Statistics {
 			} else if (m.sender !== prev.sender && gap <= REPLY_WINDOW_MINUTES) {
 				s.replySum += gap;
 				s.replyCount++;
+				// tikitaka: rapid back-and-forth within 5 minutes
+				if (gap <= 5) {
+					if (!tikitakaMap.has(prev.sender)) tikitakaMap.set(prev.sender, new Map());
+					const inner = tikitakaMap.get(prev.sender)!;
+					inner.set(m.sender, (inner.get(m.sender) ?? 0) + 1);
+				}
 			}
 		}
 
@@ -231,6 +238,14 @@ export function analyzeStatistics(data: ChatData): Statistics {
 	).getTime();
 	const totalDays = Math.round((endMidnight - startMidnight) / dayMs) + 1;
 
+	const mode: 'duo' | 'group' = participants.length >= 3 ? 'group' : 'duo';
+
+	const tikitaka = mode === 'group'
+		? Array.from(tikitakaMap.entries()).flatMap(([from, toMap]) =>
+			Array.from(toMap.entries()).map(([to, count]) => ({ from, to, count }))
+		).sort((a, b) => b.count - a.count).slice(0, 10)
+		: undefined;
+
 	return {
 		totalMessages: total,
 		totalDays,
@@ -241,6 +256,8 @@ export function analyzeStatistics(data: ChatData): Statistics {
 		hourlyDistribution,
 		weekdayDistribution,
 		topWords,
-		mediaTotals
+		mediaTotals,
+		mode,
+		tikitaka
 	};
 }

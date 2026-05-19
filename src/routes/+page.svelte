@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { parseKakaoChat } from '$lib/parser/kakao';
+	import { analyzeStatistics } from '$lib/analyzer/statistics';
+	import { sampleMessages } from '$lib/analyzer/sampler';
 
 	let rawText = $state('');
 	let errorMsg = $state<string | null>(null);
@@ -52,6 +54,12 @@
 
 	function handleAnalyze() {
 		if (!rawText.trim() || isProcessing) return;
+
+		if (rawText.length > 5 * 1024 * 1024) {
+			errorMsg = '텍스트가 너무 큽니다 (5MB 초과). 대화량을 줄여주세요.';
+			return;
+		}
+
 		isProcessing = true;
 		errorMsg = null;
 
@@ -62,8 +70,29 @@
 			return;
 		}
 
+		const msgCount = result.data.messages.length;
+		if (msgCount < 30) {
+			errorMsg = '대화가 너무 짧아서 분석할 수 없어요 (최소 30건)';
+			isProcessing = false;
+			return;
+		}
+
+		if (msgCount > 5000) {
+			result.data.messages = result.data.messages.slice(-5000);
+		}
+
+		const stats = analyzeStatistics(result.data);
+		const samples = sampleMessages(result.data);
+
 		try {
-			sessionStorage.setItem('toksim:chatData', JSON.stringify(result.data));
+			const toStore = JSON.stringify({
+				statistics: stats,
+				sampleMessages: samples,
+				mode: stats.mode,
+				truncated: msgCount > 5000 ? msgCount : null
+			});
+			sessionStorage.setItem('toksim:result', toStore);
+			isProcessing = false;
 			goto('/result');
 		} catch (e) {
 			errorMsg = '데이터를 저장할 수 없습니다. 대화량을 줄여보세요.';
@@ -74,8 +103,14 @@
 </script>
 
 <svelte:head>
-	<title>톡심 - 카카오톡 대화 분석</title>
-	<meta name="description" content="카카오톡 대화를 AI가 분석해드립니다" />
+	<title>톡심 - 카카오톡 대화 AI 분석</title>
+	<meta name="description" content="카카오톡 대화를 붙여넣으면 AI가 말투, 성격, 관계를 분석해드려요" />
+	<meta property="og:title" content="톡심 - 카카오톡 대화 AI 분석" />
+	<meta property="og:description" content="카카오톡 대화를 붙여넣으면 AI가 말투, 성격, 관계를 분석해드려요" />
+	<meta property="og:image" content="https://toksim.pages.dev/og-image.png" />
+	<meta property="og:url" content="https://toksim.pages.dev" />
+	<meta property="og:type" content="website" />
+	<meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
 
 <main>
@@ -237,8 +272,6 @@
 		max-width: 720px;
 		margin: 0 auto;
 		padding: 2rem 1rem;
-		font-family:
-			-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
 	}
 
 	header {
@@ -249,18 +282,20 @@
 	h1 {
 		font-size: 2.5rem;
 		margin: 0;
-		color: #fee500;
-		text-shadow: 2px 2px 0 #3c1e1e;
+		background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
 	}
 
 	.subtitle {
 		font-size: 1rem;
-		color: #888;
+		color: var(--text-muted);
 		font-weight: normal;
 	}
 
 	.tagline {
-		color: #555;
+		color: var(--text-secondary);
 		margin-top: 0.5rem;
 	}
 
@@ -277,39 +312,41 @@
 	textarea {
 		width: 100%;
 		padding: 1rem;
-		border: 2px solid #ddd;
+		border: 2px solid var(--border);
 		border-radius: 12px;
 		font-size: 1rem;
 		font-family: inherit;
 		resize: vertical;
 		box-sizing: border-box;
+		background: var(--bg-input);
+		color: var(--text-primary);
 	}
 
 	textarea:focus {
 		outline: none;
-		border-color: #fee500;
+		border-color: var(--neon-purple);
 	}
 
 	textarea:disabled {
-		background: #f5f5f5;
+		background: var(--bg-secondary);
 	}
 
 	.drop-zone.dragging textarea {
-		border-color: #fee500;
-		background: #fffbe6;
+		border-color: var(--neon-purple);
+		background: var(--bg-secondary);
 	}
 
 	.drop-overlay {
 		position: absolute;
 		inset: 0;
-		background: rgba(254, 229, 0, 0.9);
+		background: rgba(168, 85, 247, 0.9);
 		border-radius: 12px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		font-size: 1.25rem;
 		font-weight: 700;
-		color: #3c1e1e;
+		color: white;
 		pointer-events: none;
 	}
 
@@ -331,9 +368,9 @@
 	.file-btn {
 		display: inline-block;
 		padding: 0.65rem 1rem;
-		background: white;
-		border: 2px solid #fee500;
-		color: #3c1e1e;
+		background: var(--bg-input);
+		border: 2px solid var(--neon-purple);
+		color: var(--text-primary);
 		border-radius: 10px;
 		font-size: 0.95rem;
 		font-weight: 600;
@@ -342,28 +379,29 @@
 	}
 
 	.file-btn:hover {
-		background: #fffbe6;
+		background: rgba(168, 85, 247, 0.1);
 	}
 
 	.file-hint {
-		color: #888;
+		color: var(--text-muted);
 		font-size: 0.85rem;
 	}
 
 	.analyze-btn {
 		padding: 1rem;
-		background: #fee500;
-		color: #3c1e1e;
+		background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+		color: white;
 		border: none;
 		border-radius: 12px;
 		font-size: 1.1rem;
 		font-weight: bold;
 		cursor: pointer;
-		transition: transform 0.1s;
+		transition: transform 0.1s, opacity 0.1s;
 	}
 
 	.analyze-btn:hover:not(:disabled) {
 		transform: translateY(-2px);
+		opacity: 0.9;
 	}
 
 	.analyze-btn:disabled {
@@ -372,10 +410,10 @@
 	}
 
 	.error {
-		color: #c00;
+		color: var(--neon-pink);
 		margin: 0;
 		padding: 0.75rem;
-		background: #fee;
+		background: rgba(236, 72, 153, 0.15);
 		border-radius: 8px;
 		font-size: 0.9rem;
 	}
@@ -383,7 +421,7 @@
 	.help {
 		margin-top: 3rem;
 		padding: 1.5rem;
-		background: #f8f8f8;
+		background: var(--bg-card);
 		border-radius: 12px;
 	}
 
@@ -397,7 +435,7 @@
 		display: flex;
 		gap: 0.5rem;
 		margin-bottom: 1rem;
-		border-bottom: 2px solid #e5e5e5;
+		border-bottom: 2px solid var(--border);
 	}
 
 	.tab {
@@ -405,7 +443,7 @@
 		border: none;
 		padding: 0.6rem 0.9rem;
 		font-size: 0.9rem;
-		color: #888;
+		color: var(--text-muted);
 		cursor: pointer;
 		border-bottom: 2px solid transparent;
 		margin-bottom: -2px;
@@ -413,16 +451,16 @@
 	}
 
 	.tab.active {
-		color: #3c1e1e;
-		border-bottom-color: #fee500;
+		color: var(--text-primary);
+		border-bottom-color: var(--neon-purple);
 	}
 
 	.tab:hover:not(.active) {
-		color: #555;
+		color: var(--text-secondary);
 	}
 
 	.guide-content {
-		color: #555;
+		color: var(--text-secondary);
 		font-size: 0.92rem;
 		line-height: 1.7;
 	}
@@ -437,20 +475,20 @@
 	}
 
 	.guide-content strong {
-		color: #3c1e1e;
+		color: var(--text-primary);
 	}
 
 	.privacy {
 		margin-top: 1rem;
 		padding-top: 1rem;
-		border-top: 1px solid #e5e5e5;
-		color: #888;
+		border-top: 1px solid var(--border);
+		color: var(--text-muted);
 		font-size: 0.85rem;
 		text-align: center;
 	}
 
 	.intro {
-		color: #555;
+		color: var(--text-secondary);
 		margin: 0 0 1rem;
 		font-size: 0.92rem;
 	}
@@ -458,7 +496,7 @@
 	.guide-content h3 {
 		margin: 1rem 0 0.4rem;
 		font-size: 0.95rem;
-		color: #3c1e1e;
+		color: var(--text-primary);
 	}
 
 	.guide-content h3:first-child {
@@ -466,19 +504,19 @@
 	}
 
 	.guide-content h3.minor {
-		color: #888;
+		color: var(--text-muted);
 		font-size: 0.88rem;
 		margin-top: 1.5rem;
 	}
 
 	.callout {
-		background: #fff8e1;
-		border-left: 3px solid #fee500;
+		background: rgba(168, 85, 247, 0.1);
+		border-left: 3px solid var(--neon-pink);
 		padding: 0.7rem 0.9rem;
 		border-radius: 6px;
 		margin: 0 0 1rem;
 		font-size: 0.9rem;
 		line-height: 1.55;
-		color: #555;
+		color: var(--text-secondary);
 	}
 </style>

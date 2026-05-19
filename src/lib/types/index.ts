@@ -69,11 +69,14 @@ export interface AIAnalysis {
 	conversationTemperature: number;
 	relationshipDynamic: string;
 	oneLineSummary: string;
+	groupMood?: string;
+	mvp?: string;
 }
 
 export interface AnalyzeRequest {
 	statistics: Statistics;
 	sampleMessages: { sender: string; content: string; timestamp: string }[];
+	mode: 'duo' | 'group';
 }
 
 export interface AnalyzeResponse {
@@ -99,5 +102,7 @@ export interface Statistics {
 		voice: number;
 		file: number;
 	};
+	mode: 'duo' | 'group';
+	tikitaka?: { from: string; to: string; count: number }[];
 }
 

@@ -7,7 +7,7 @@ const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
 
-function buildPrompt(stats: Statistics, samples: AnalyzeRequest['sampleMessages']): string {
+function buildPrompt(stats: Statistics, samples: AnalyzeRequest['sampleMessages'], mode: 'duo' | 'group' = 'duo'): string {
 	const participantLines = stats.participants
 		.map((p) => {
 			const replyStr =
@@ -19,6 +19,33 @@ function buildPrompt(stats: Statistics, samples: AnalyzeRequest['sampleMessages'
 	const sampleLines = samples
 		.map((s) => `${s.sender}: ${s.content.replace(/\n/g, ' ')}`)
 		.join('\n');
+
+	if (mode === 'group') {
+		return `당신은 한국어 카카오톡 그룹 대화를 분석하는 전문가입니다. 아래 데이터를 분석하여 JSON으로만 응답하세요.
+
+[참여자 통계]
+${participantLines}
+
+[대화 샘플 ${samples.length}개]
+${sampleLines}
+
+[분석 지침]
+- groupMood: 그룹 분위기를 한 마디로 표현. 예: "웃음 가득 단톡방", "업무 위주 그룹", "심야 수다방"
+- mvp: 분위기 메이커 또는 가장 활발한 참여자 이름 (통계 기반)
+- participants: 각 참여자의 말투 유형과 성격 키워드 3개
+- oneLineSummary: 이 단톡방을 한 줄로 요약. 재치있고 임팩트있게. 밈/유행어 톤.
+- 모든 문자열은 한국어로 작성하세요.
+
+[응답 스키마]
+{
+  "participants": [{ "name": "이름", "speechStyle": "말투", "personalityKeywords": ["키워드1", "키워드2", "키워드3"] }],
+  "groupMood": "그룹 분위기",
+  "mvp": "채팅왕 이름",
+  "conversationTemperature": 0,
+  "relationshipDynamic": "",
+  "oneLineSummary": "한 줄 총평"
+}`;
+	}
 
 	return `당신은 한국어 카카오톡 대화를 분석하는 전문가입니다. 아래 데이터를 분석하여 JSON으로만 응답하세요.
 
@@ -88,7 +115,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 		return json(body, { status: 400 });
 	}
 
-	const prompt = buildPrompt(payload.statistics, payload.sampleMessages);
+	const prompt = buildPrompt(payload.statistics, payload.sampleMessages, payload.mode ?? 'duo');
 	const requestBody = JSON.stringify({
 		contents: [{ parts: [{ text: prompt }] }],
 		generationConfig: {
@@ -100,12 +127,16 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 	const attemptErrors: string[] = [];
 
 	for (const model of GEMINI_MODELS) {
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 30000);
 		try {
 			const geminiRes = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: requestBody
+				body: requestBody,
+				signal: controller.signal
 			});
+			clearTimeout(timeout);
 
 			if (!geminiRes.ok) {
 				const errText = await geminiRes.text();
@@ -135,15 +166,23 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 			const body: AnalyzeResponse = { success: true, analysis };
 			return json(body);
 		} catch (e) {
+			clearTimeout(timeout);
+			if (e instanceof DOMException && e.name === 'AbortError') {
+				attemptErrors.push(`${model}:timeout`);
+				continue;
+			}
 			console.error(`analyze ${model} error:`, e);
 			attemptErrors.push(`${model}:${e instanceof Error ? e.message : 'unknown'}`);
 		}
 	}
 
 	console.error('All Gemini models failed:', attemptErrors.join(', '));
+	const allRateLimit = attemptErrors.every((e) => e.includes(':429'));
 	const body: AnalyzeResponse = {
 		success: false,
-		error: 'AI 분석 서비스가 일시적으로 혼잡합니다. 1~2분 후 다시 시도해주세요.'
+		error: allRateLimit
+			? '오늘 분석이 마감되었습니다. 내일 다시 이용해주세요 🙏'
+			: 'AI 분석 서비스가 일시적으로 혼잡합니다. 1~2분 후 다시 시도해주세요.'
 	};
 	return json(body, { status: 502 });
 };

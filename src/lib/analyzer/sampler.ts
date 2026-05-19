@@ -12,7 +12,7 @@ export interface SampledMessage {
 function toSample(m: Message): SampledMessage {
 	return {
 		sender: m.sender,
-		content: m.content,
+		content: m.content.slice(0, 200),
 		timestamp: m.timestamp.toISOString()
 	};
 }

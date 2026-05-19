@@ -58,7 +58,7 @@ export function parseKakaoChat(raw: string): ParseResult {
 			const headerDate = new Date(
 				parseInt(m[1], 10),
 				parseInt(m[2], 10) - 1,
-				parseInt(m[3], 10) - 1
+				parseInt(m[3], 10)
 			);
 			initialDate = {
 				year: headerDate.getFullYear(),
