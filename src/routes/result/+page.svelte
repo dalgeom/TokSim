@@ -5,6 +5,7 @@
 	import CardCarousel from '$lib/components/CardCarousel.svelte';
 	import ResultCard from '$lib/components/ResultCard.svelte';
 	import DownloadButton from '$lib/components/DownloadButton.svelte';
+	import BadgeShareSection from '$lib/components/BadgeShareSection.svelte';
 	import AdBanner from '$lib/components/AdBanner.svelte';
 
 	let stats = $state<Statistics | null>(null);
@@ -213,6 +214,10 @@
 				</div>
 			{/if}
 		</section>
+
+		{#if mode === 'group'}
+			<BadgeShareSection participants={stats.participants} />
+		{/if}
 
 		<AdBanner />
 
