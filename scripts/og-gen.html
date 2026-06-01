@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#070710;font-family:'Pretendard',sans-serif}
+  #card{width:800px;height:400px;overflow:hidden;position:relative;
+    background:radial-gradient(85% 95% at 50% 28%, #181430 0%, #09090f 72%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;color:#e8e8f0}
+  #card::before{content:"";position:absolute;inset:14px;border-radius:13px;border:2px solid transparent;
+    background:linear-gradient(#0a0a12,#0a0a12) padding-box,
+      conic-gradient(from 0deg, var(--a), #ffffff22, var(--a2), var(--a)) border-box}
+  .rare{position:absolute;top:30px;left:30px;font-size:15px;font-weight:800;letter-spacing:.18em;
+    padding:5px 12px;border-radius:6px;color:#0a0a0a;background:linear-gradient(90deg,var(--a),var(--a2))}
+  .stat{position:absolute;top:30px;right:30px;text-align:right}
+  .stat .n{font-size:30px;font-weight:900;color:#fff;line-height:1}
+  .stat .l{font-size:13px;color:#a9a9c4;font-weight:600;margin-top:3px}
+  .medal{width:168px;height:168px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:100px;
+    background:radial-gradient(circle at 35% 30%, #271f48, #0c0a1c);position:relative;z-index:1;
+    box-shadow:0 0 0 3px color-mix(in srgb, var(--a) 65%, transparent), 0 0 60px color-mix(in srgb, var(--a) 45%, transparent)}
+  .name{font-size:52px;font-weight:900;margin-top:20px;z-index:1;
+    background:linear-gradient(90deg, color-mix(in srgb,var(--a) 70%, #fff), var(--a2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .tagline{font-size:20px;color:#b9b9d0;margin-top:8px;font-weight:600;z-index:1;text-align:center;padding:0 30px}
+  .wm{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:15px;letter-spacing:.06em;color:rgba(255,255,255,.5);font-weight:600}
+</style></head>
+<body><div id="card"></div>
+<script>
+const T = {
+  king:{e:"👑",n:"수다왕",t:"이 단톡방은 내가 먹여 살린다",a:"#f59e0b",a2:"#fbbf24",r:"LEGENDARY",sn:"38%",sl:"메시지 점유율 1위"},
+  moodmaker:{e:"🎉",n:"분위기메이커",t:"내가 빠지면 단톡방이 조용해진다",a:"#ec4899",a2:"#f472b6",r:"EPIC",sn:"1위",sl:"ㅋㅋㅎㅎ 리액션"},
+  vampire:{e:"🧛",n:"에너지뱀파이어",t:"대화의 시작은 언제나 나",a:"#a855f7",a2:"#ec4899",r:"EPIC",sn:"2.4×",sl:"평균보다 먼저 말 검"},
+  seenzone:{e:"💤",n:"읽씹왕",t:"읽씹도 예술이다",a:"#3b82f6",a2:"#60a5fa",r:"UNCOMMON",sn:"39분",sl:"평균 답장 속도"},
+  ghost:{e:"👻",n:"유령",t:"나는 분명 이 방에 있다",a:"#64748b",a2:"#94a3b8",r:"SECRET",sn:"3%",sl:"발화율 하위"},
+  reactionbot:{e:"🤣",n:"무한리액션봇",t:"ㅋㅋㅋㅋㅋㅋㅋㅋ",a:"#f97316",a2:"#fb923c",r:"RARE",sn:"×2.0",sl:"메시지당 ㅋ 개수"},
+  essayist:{e:"📚",n:"장문주의자",t:"할 말은 끝까지 한다",a:"#14b8a6",a2:"#2dd4bf",r:"RARE",sn:"87자",sl:"평균 메시지 길이"},
+  factbomber:{e:"🧊",n:"팩트폭격기",t:"감정은 빼고, 팩트만",a:"#06b6d4",a2:"#22d3ee",r:"UNCOMMON",sn:"0개",sl:"이모티콘 사용"},
+  photobomber:{e:"📷",n:"사진폭격기",t:"말보다 사진",a:"#22c55e",a2:"#4ade80",r:"RARE",sn:"1위",sl:"사진 전송"},
+  emojirich:{e:"🎭",n:"이모티콘부자",t:"이모티콘으로 다 말함",a:"#d946ef",a2:"#e879f9",r:"RARE",sn:"100%",sl:"이모티콘 비율"},
+  normal:{e:"🙂",n:"평범한수다러",t:"균형 잡힌 단톡방 시민",a:"#6b7280",a2:"#9ca3af",r:"COMMON",sn:"—",sl:"균형형"}
+};
+const slug = new URLSearchParams(location.search).get('slug') || 'vampire';
+const x = T[slug]; const card = document.getElementById('card');
+card.style.setProperty('--a',x.a); card.style.setProperty('--a2',x.a2);
+card.innerHTML = `<div class="rare">${x.r}</div>
+  <div class="stat"><div class="n">${x.sn}</div><div class="l">${x.sl}</div></div>
+  <div class="medal">${x.e}</div><div class="name">${x.n}</div>
+  <div class="tagline">"${x.t}"</div><div class="wm">toksim.pages.dev</div>`;
+document.title = 'og-'+slug;
+</script></body></html>
