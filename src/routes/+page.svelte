@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { parseKakaoChat } from '$lib/parser/kakao';
 	import { analyzeStatistics } from '$lib/analyzer/statistics';
 	import { sampleMessages } from '$lib/analyzer/sampler';
 	import ChatPreview from '$lib/components/ChatPreview.svelte';
+	import InAppBrowserNotice from '$lib/components/InAppBrowserNotice.svelte';
+	import { detectPlatform } from '$lib/utils/inapp';
 
 	let rawText = $state('');
 	let errorMsg = $state<string | null>(null);
@@ -12,6 +15,11 @@
 	let activeGuide = $state<'android' | 'ios' | 'pc'>('android');
 	let showPreview = $state(true);
 	let textareaEl = $state<HTMLTextAreaElement | null>(null);
+
+	onMount(() => {
+		// 내 기기에 맞는 가이드를 기본 선택(android/ios/pc)
+		activeGuide = detectPlatform(navigator.userAgent);
+	});
 
 	function activateTextarea() {
 		showPreview = false;
@@ -34,6 +42,7 @@
 		try {
 			rawText = await readFile(file);
 			showPreview = false;
+			handleAnalyze(); // 파일은 명시적 행동 → 에러 표시하며 즉시 분석
 		} catch (e) {
 			errorMsg = e instanceof Error ? e.message : '파일을 읽을 수 없습니다.';
 		}
@@ -62,30 +71,29 @@
 		if (file) handleFileSelect(file);
 	}
 
-	function handleAnalyze() {
+	// showErrors=true: 명시적 분석(에러 표시) / false: 자동 분석(유효할 때만 조용히 진행)
+	function runAnalysis(showErrors: boolean) {
 		if (!rawText.trim() || isProcessing) return;
 
 		if (rawText.length > 5 * 1024 * 1024) {
-			errorMsg = '텍스트가 너무 큽니다 (5MB 초과). 대화량을 줄여주세요.';
+			if (showErrors) errorMsg = '텍스트가 너무 큽니다 (5MB 초과). 대화량을 줄여주세요.';
 			return;
 		}
 
-		isProcessing = true;
-		errorMsg = null;
-
 		const result = parseKakaoChat(rawText);
 		if (!result.success || !result.data) {
-			errorMsg = result.error ?? '파싱에 실패했습니다.';
-			isProcessing = false;
+			if (showErrors) errorMsg = result.error ?? '파싱에 실패했습니다.';
 			return;
 		}
 
 		const msgCount = result.data.messages.length;
 		if (msgCount < 30) {
-			errorMsg = '대화가 너무 짧아서 분석할 수 없어요 (최소 30건)';
-			isProcessing = false;
+			if (showErrors) errorMsg = '대화가 너무 짧아서 분석할 수 없어요 (최소 30건)';
 			return;
 		}
+
+		isProcessing = true;
+		errorMsg = null;
 
 		if (msgCount > 5000) {
 			result.data.messages = result.data.messages.slice(-5000);
@@ -105,10 +113,24 @@
 			isProcessing = false;
 			goto('/result');
 		} catch (e) {
-			errorMsg = '데이터를 저장할 수 없습니다. 대화량을 줄여보세요.';
+			if (showErrors) errorMsg = '데이터를 저장할 수 없습니다. 대화량을 줄여보세요.';
 			console.error(e);
 			isProcessing = false;
 		}
+	}
+
+	function handleAnalyze() {
+		runAnalysis(true);
+	}
+
+	// 붙여넣기/파일선택 후 유효하면 버튼 탭 없이 자동 진행(조용히)
+	function tryAutoAnalyze() {
+		runAnalysis(false);
+	}
+
+	function onTextareaPaste() {
+		// 바인딩(rawText) 반영 후 자동 분석 시도
+		setTimeout(() => tryAutoAnalyze(), 0);
 	}
 </script>
 
@@ -129,6 +151,8 @@
 		<p class="tagline">카카오톡 대화를 붙여넣거나 파일을 올리면 AI가 말투와 관계를 분석해드려요</p>
 	</header>
 
+	<InAppBrowserNotice />
+
 	<section class="input-section">
 		<div
 			class="drop-zone"
@@ -148,6 +172,7 @@
 					rows="12"
 					disabled={isProcessing}
 					onfocus={() => (showPreview = false)}
+					onpaste={onTextareaPaste}
 				></textarea>
 			{/if}
 			{#if isDragging}
